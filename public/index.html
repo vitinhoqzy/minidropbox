@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Dropbox Cloud</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #0f172a; 
+            --card-bg: #1e293b;  
+            --text-main: #f8fafc; 
+            --text-muted: #94a3b8;
+            --border-color: #334155; 
+            --hover-bg: #273548;
+            --folder-bg: #422006;
+            --folder-border: #854d0e;
+            --folder-text: #fef08a;
+            --del-bg: #450a0a;
+            --del-text: #fca5a5;
+        }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: var(--bg-color); 
+            color: var(--text-main);
+            margin: 0; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            min-height: 100vh;
+            box-sizing: border-box;
+            justify-content: center;
+        }
+
+        .container { 
+            background: var(--card-bg); 
+            padding: 24px; 
+            border-radius: 16px; 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); 
+            width: 100%; 
+            max-width: 800px; 
+            box-sizing: border-box;
+        }
+
+        /* Tela de Login */
+        #loginScreen {
+            max-width: 400px;
+            text-align: center;
+        }
+        .login-box {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .login-box input {
+            padding: 12px 14px;
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 15px;
+            color: var(--text-main);
+            outline: none;
+        }
+        .login-box input:focus { border-color: var(--primary); }
+        .login-box button {
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .login-box button:hover { background: var(--primary-hover); }
+
+        #appScreen { display: none; }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        h2 { margin: 0; font-size: 20px; font-weight: 700; color: var(--text-main); }
+        
+        .btn-logout {
+            background: var(--del-bg);
+            color: var(--del-text);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .btn-logout:hover { background: #7f1d1d; }
+
+        .storage-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .storage-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-weight: 500;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .storage-bar-container {
+            width: 100%;
+            background: var(--border-color);
+            border-radius: 4px;
+            height: 6px;
+            overflow: hidden;
+        }
+        .storage-bar-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .breadcrumb { 
+            font-size: 13px; 
+            color: var(--text-muted); 
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--border-color);
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        
+        input[type="text"] { 
+            flex: 1; 
+            min-width: 180px;
+            padding: 10px 14px; 
+            background: #0f172a;
+            border: 1px solid var(--border-color); 
+            border-radius: 8px; 
+            font-size: 14px;
+            color: var(--text-main);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus { border-color: var(--primary); }
+
+        button { 
+            padding: 10px 18px; 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer; 
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        button:hover { background: var(--primary-hover); }
+
+        .drop-zone { 
+            border: 2px dashed var(--border-color); 
+            border-radius: 12px; 
+            padding: 30px 15px; 
+            text-align: center; 
+            cursor: pointer; 
+            color: var(--text-muted); 
+            background: rgba(15, 23, 42, 0.3);
+            margin-bottom: 20px; 
+            transition: all 0.2s ease; 
+        }
+        .drop-zone:hover, .drop-zone.dragover { 
+            border-color: var(--primary); 
+            background: rgba(37, 99, 235, 0.05); 
+            color: var(--text-main);
+        }
+
+        .drop-zone p { margin: 0; font-size: 14px; font-weight: 500; }
+        .drop-zone span { font-size: 12px; color: var(--text-muted); display: block; margin-top: 6px; }
+
+        .progress-container { width: 100%; background: var(--border-color); border-radius: 8px; overflow: hidden; margin-bottom: 20px; display: none; }
+        .progress-bar { width: 0%; height: 8px; background: var(--primary); transition: width 0.1s ease; }
+
+        h3 { font-size: 15px; margin: 20px 0 10px 0; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .folder-list { list-style: none; padding: 0; margin: 0 0 20px 0; }
+        .folder-item { 
+            background: var(--folder-bg); 
+            border: 1px solid var(--folder-border);
+            color: var(--folder-text);
+            margin-bottom: 8px; 
+            padding: 12px 16px; 
+            border-radius: 10px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            font-weight: 600;
+            cursor: pointer; 
+            transition: background 0.1s;
+        }
+        .folder-item:hover { background: #713f12; }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 16px;
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        .media-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .media-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--primary);
+        }
+
+        .media-thumb {
+            width: 100%;
+            height: 120px;
+            background: #090d16;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .media-thumb img, .media-thumb video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .media-thumb .file-icon-fallback { font-size: 36px; }
+
+        .media-info {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+            justify-content: space-between;
+        }
+
+        .media-name {
+            font-size: 12px;
+            color: var(--text-main);
+            word-break: break-all;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .media-name:hover { color: var(--primary); }
+
+        .media-size { font-size: 10px; color: var(--text-muted); }
+
+        .media-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
+            padding-top: 8px;
+            margin-top: 4px;
+        }
+
+        a.btn-download { 
+            color: #93c5fd; 
+            text-decoration: none; 
+            font-size: 11px; 
+            font-weight: 600; 
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: rgba(37, 99, 235, 0.2);
+        }
+        a.btn-download:hover { background: rgba(37, 99, 235, 0.4); }
+
+        .btn-delete { 
+            background: var(--del-bg); 
+            color: var(--del-text); 
+            padding: 4px 8px; 
+            font-size: 11px; 
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-delete:hover { background: #7f1d1d; }
+
+        .btn-link-voltar { background: var(--border-color); color: var(--text-main); font-size: 11px; padding: 4px 8px; border: none; border-radius: 6px; cursor: pointer; }
+        .btn-link-voltar:hover { background: #475569; }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+        .modal-content {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 95%;
+            max-height: 90%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+        }
+        .modal-content img, .modal-content video {
+            max-width: 100%;
+            max-height: 75vh;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+        .modal-close:hover { color: var(--text-main); }
+    </style>
+</head>
+<body>
+
+    <!-- TELA DE LOGIN -->
+    <div class="container" id="loginScreen">
+        <h2>🔒 Mini Dropbox Secure</h2>
+        <p style="color: var(--text-muted); font-size: 14px; margin-top: 8px;">Insira a palavra-passe para aceder ao armazenamento</p>
+        <div class="login-box">
+            <input type="password" id="passwordInput" placeholder="Palavra-passe (ex: 123)" onkeypress="if(event.key === 'Enter') fazerLogin()">
+            <button onclick="fazerLogin()">Entrar</button>
+        </div>
+    </div>
+
+    <!-- APLICAÇÃO PRINCIPAL (Oculta até fazer login) -->
+    <div class="container" id="appScreen">
+        <header>
+            <h2>☁️ Mini Dropbox Cloud</h2>
+            <button class="btn-logout" onclick="fazerLogout()">Sair</button>
+        </header>
+
+        <div class="storage-card">
+            <div class="storage-info">
+                <span id="storageText">Uso: A calcular...</span>
+                <span id="storageFreeText"></span>
+            </div>
+            <div class="storage-bar-container">
+                <div class="storage-bar-fill" id="storageBarFill"></div>
+            </div>
+        </div>
+        
+        <div class="breadcrumb" id="breadcrumb">
+            <span id="breadcrumbText">Pasta atual: Raiz</span>
+            <div id="breadcrumbAction"></div>
+        </div>
+
+        <div class="controls">
+            <input type="text" id="folderInput" placeholder="Nome da nova pasta...">
+            <button onclick="criarPasta()">Criar Pasta</button>
+        </div>
+
+        <div class="drop-zone" id="dropZone">
+            <p>📁 Arraste ficheiros/fotos ou clique aqui</p>
+            <span>Suporta múltiplos ficheiros (ideal para o rolo da câmara)</span>
+            <input type="file" id="fileInput" multiple hidden>
+        </div>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div id="contentArea">
+            <ul class="folder-list" id="folderList"></ul>
+            <h3>Galeria de Ficheiros</h3>
+            <div class="gallery-grid" id="fileGrid"></div>
+        </div>
+    </div>
+
+    <!-- Modal de Pré-visualização -->
+    <div class="modal-overlay" id="previewModal" onclick="fecharModal(event)">
+        <div class="modal-content" id="modalContentBox">
+            <button class="modal-close" onclick="fecharModalDireto()">&times;</button>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentFolder = '';
+
+        const loginScreen = document.getElementById('loginScreen');
+        const appScreen = document.getElementById('appScreen');
+        const passwordInput = document.getElementById('passwordInput');
+
+        // Verifica se já está autenticado ao carregar a página
+        async function verificarSessao() {
+            try {
+                const res = await fetch('/api/check-auth');
+                if (res.ok) {
+                    loginScreen.style.display = 'none';
+                    appScreen.style.display = 'block';
+                    carregarTudo();
+                } else {
+                    loginScreen.style.display = 'block';
+                    appScreen.style.display = 'none';
+                }
+            } catch (e) {
+                console.error('Erro ao verificar sessão', e);
+            }
+        }
+
+        async function fazerLogin() {
+            const password = passwordInput.value;
+            if (!password) return alert('Digite a palavra-passe.');
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+
+                if (res.ok) {
+                    passwordInput.value = '';
+                    loginScreen.style.display = 'none';
+                    appScreen.style.display = 'block';
+                    carregarTudo();
+                } else {
+                    alert('Palavra-passe incorreta!');
+                }
+            } catch (e) {
+                alert('Erro ao tentar fazer login.');
+            }
+        }
+
+        async function fazerLogout() {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.reload();
+        }
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const folderList = document.getElementById('folderList');
+        const fileGrid = document.getElementById('fileGrid');
+        const progressBar = document.getElementById('progressBar');
+        const progressContainer = document.getElementById('progressContainer');
+        const breadcrumbText = document.getElementById('breadcrumbText');
+        const breadcrumbAction = document.getElementById('breadcrumbAction');
+        const previewModal = document.getElementById('previewModal');
+        const modalBody = document.getElementById('modalBody');
+        const storageText = document.getElementById('storageText');
+        const storageFreeText = document.getElementById('storageFreeText');
+        const storageBarFill = document.getElementById('storageBarFill');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) uploadFiles(fileInput.files);
+        });
+
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
+        });
+
+        function criarPasta() {
+            const folderName = document.getElementById('folderInput').value.trim();
+            if (!folderName) return alert('Por favor, digite um nome para a pasta.');
+            
+            currentFolder = currentFolder ? `${currentFolder}/${folderName}` : folderName;
+            document.getElementById('folderInput').value = '';
+            carregarTudo();
+        }
+
+        function uploadFiles(files) {
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('meuArquivo', files[i]);
+            }
+            formData.append('folder', currentFolder);
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/upload', true);
+
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+
+            xhr.upload.onprogress = function (e) {
+                if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+                    progressBar.style.width = percentComplete + '%';
+                }
+            };
+
+            xhr.onload = function () {
+                progressContainer.style.display = 'none';
+                fileInput.value = '';
+                if (xhr.status === 200) {
+                    carregarTudo();
+                } else if (xhr.status === 401) {
+                    alert('Sessão expirada. Faça login novamente.');
+                    window.location.reload();
+                } else {
+                    alert('Erro ao enviar os ficheiros.');
+                }
+            };
+
+            xhr.send(formData);
+        }
+
+        async function apagarFicheiro(filename) {
+            if (!confirm(`Tens a certeza que queres apagar "${filename}"?`)) return;
+
+            try {
+                const res = await fetch('/api/files', { 
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: filename })
+                });
+                
+                if (res.ok) {
+                    carregarTudo();
+                } else {
+                    alert('Erro ao apagar o ficheiro.');
+                }
+            } catch (error) {
+                console.error('Erro de rede ao apagar:', error);
+            }
+        }
+
+        function preVisualizar(file) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            const imagens = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'];
+            const videos = ['mp4', 'mov', 'webm', 'ogg'];
+
+            modalBody.innerHTML = '';
+
+            if (imagens.includes(ext)) {
+                modalBody.innerHTML = `<img src="${file.url}" alt="${file.name}">`;
+                previewModal.style.display = 'flex';
+            } else if (videos.includes(ext)) {
+                modalBody.innerHTML = `<video src="${file.url}" controls autoplay></video>`;
+                previewModal.style.display = 'flex';
+            } else {
+                window.open(file.url, '_blank');
+            }
+        }
+
+        function fecharModal(e) {
+            if (e.target === previewModal) {
+                fecharModalDireto();
+            }
+        }
+
+        function fecharModalDireto() {
+            previewModal.style.display = 'none';
+            modalBody.innerHTML = '';
+        }
+
+        async function carregarTudo() {
+            await carregarStorage();
+            await carregarConteudo();
+        }
+
+        async function carregarStorage() {
+            try {
+                const res = await fetch('/api/storage');
+                if (res.status === 401) return;
+                const data = await res.json();
+                storageText.innerHTML = `Uso: <b>${data.usedUploads}</b>`;
+                storageFreeText.innerHTML = `Livre: <b>${data.freeDisk}</b>`;
+                storageBarFill.style.width = `${data.usagePercent}%`;
+            } catch (error) {
+                console.error('Erro ao carregar armazenamento:', error);
+            }
+        }
+
+        async function carregarConteudo() {
+            breadcrumbText.innerHTML = `Pasta atual: <b>/${currentFolder || ''}</b>`;
+            breadcrumbAction.innerHTML = currentFolder ? '<button class="btn-link-voltar" onclick="voltarRaiz()">Voltar à Raiz</button>' : '';
+
+            try {
+                const res = await fetch(`/api/files?folder=${encodeURIComponent(currentFolder)}`);
+                if (res.status === 401) {
+                    window.location.reload();
+                    return;
+                }
+                const data = await res.json();
+                
+                folderList.innerHTML = '';
+                fileGrid.innerHTML = '';
+
+                if (data.folders.length > 0) {
+                    data.folders.forEach(folder => {
+                        const li = document.createElement('li');
+                        li.className = 'folder-item';
+                        li.innerHTML = `<div>📁 ${folder}</div>`;
+                        li.onclick = () => {
+                            currentFolder = currentFolder ? `${currentFolder}/${folder}` : folder;
+                            carregarConteudo();
+                        };
+                        folderList.appendChild(li);
+                    });
+                }
+
+                if (data.files.length === 0 && data.folders.length === 0) {
+                    fileGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 30px;">Esta pasta está vazia</div>';
+                    return;
+                }
+
+                data.files.forEach(file => {
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    const imagens = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'];
+                    const videos = ['mp4', 'mov', 'webm', 'ogg'];
+
+                    const card = document.createElement('div');
+                    card.className = 'media-card';
+
+                    const thumbDiv = document.createElement('div');
+                    thumbDiv.className = 'media-thumb';
+                    thumbDiv.onclick = () => preVisualizar(file);
+
+                    if (imagens.includes(ext)) {
+                        thumbDiv.innerHTML = `<img src="${file.url}" alt="${file.name}" loading="lazy">`;
+                    } else if (videos.includes(ext)) {
+                        thumbDiv.innerHTML = `<video src="${file.url}#t=0.5" muted preload="metadata"></video>`;
+                    } else {
+                        thumbDiv.innerHTML = `<span class="file-icon-fallback">📄</span>`;
+                    }
+
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = 'media-info';
+                    infoDiv.innerHTML = `
+                        <div>
+                            <div class="media-name" title="${file.name}">${file.name}</div>
+                            <div class="media-size">${file.size}</div>
+                        </div>
+                        <div class="media-actions">
+                            <a class="btn-download" href="${file.url}" target="_blank">Baixar</a>
+                            <button class="btn-delete" onclick="apagarFicheiro('${file.path}')">Apagar</button>
+                        </div>
+                    `;
+
+                    const nameEl = infoDiv.querySelector('.media-name');
+                    nameEl.onclick = () => preVisualizar(file);
+
+                    card.appendChild(thumbDiv);
+                    card.appendChild(infoDiv);
+                    fileGrid.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar conteúdo:', error);
+            }
+        }
+
+        function voltarRaiz() {
+            currentFolder = '';
+            carregarConteudo();
+        }
+
+        // Executa a verificação de sessão assim que abre a página
+        verificarSessao();
+    </script>
+</body>
+</html>
